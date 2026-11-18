@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#2b2340">
+<title>숨은 사회연대경제 찾기</title>
+<link rel="stylesheet" href="./assets/fonts/galmuri.css">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<canvas id="bg" width="240" height="150" aria-hidden="true"></canvas>
+
+<!-- 1. TITLE -->
+<section class="screen" id="s-title">
+  <div class="title-wrap">
+    <div class="title-main">
+      <span class="tag" id="t-host"></span>
+      <span class="t-event" id="t-event"></span>
+      <h1 class="t-game outl" id="t-game"></h1>
+      <p class="title-purpose">평범한 하루를 채우는 우리 주변 곳곳의 사회연대경제 제품들을 지금 한 번 발견해보세요!</p>
+      
+      <button class="pbtn coral t-start" id="btn-start"><span class="blink">▶</span> 시작</button>
+    </div>
+    <aside class="panel rank" id="rank-box" aria-live="polite">
+      <h3>★ 오늘의 TOP 10</h3>
+      <div class="rank-head" aria-hidden="true"><span>순위</span><span>이름</span><span>걸린 시간 · 찾은 개수</span></div><ol id="rank-list"></ol>
+      <small id="rank-note"></small>
+    </aside>
+  </div>
+  <button class="pbtn small fs-btn" id="btn-fs" aria-label="전체화면">⛶</button>
+</section>
+
+<!-- 2. NAME + RULES -->
+<section class="screen" id="s-entry" hidden>
+  <form class="panel entry" id="entry-form" autocomplete="off">
+    <h2>▶ 이름과 전화번호 뒤 네 자리를 입력하세요</h2>
+    <label class="entry-label" for="name-in">이름</label>
+    <input class="name-in" id="name-in" maxlength="12" placeholder="홍길동" enterkeyhint="next" aria-label="이름">
+    <label class="entry-label" for="phone-last4">전화번호 뒤 네 자리</label>
+    <input class="name-in" id="phone-last4" type="text" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" placeholder="예: 0123" required autocomplete="off" aria-describedby="phone-help">
+    <small id="phone-help">※ 참여 인원 집계 및 중복 확인 목적으로만 활용됩니다.</small>
+    <p class="err" id="name-err" role="alert"></p>
+    <div class="rules">
+      <div class="rule"><canvas width="12" height="12" data-spr="magnifier"></canvas><div><b>찾기</b>그림 속에 숨은 사회연대경제 제품 10개를 찾아 누르세요.</div></div>
+      <div class="rule"><canvas width="12" height="12" data-spr="clock"></canvas><div><b>30초</b>맞으면 +100점, 틀리면 −20점. 다 찾으면 남은 1초당 +10점!</div></div>
+      <div class="rule"><canvas width="12" height="12" data-spr="hand"></canvas><div><b>확대</b>두 손가락으로 벌리거나 + 버튼. 확대한 뒤 끌어서 이동해요.</div></div>
+    </div>
+    <div class="row">
+      <button type="button" class="pbtn small" id="btn-entry-back">◀ 처음으로</button>
+      <button type="submit" class="pbtn coral">다음 ▶</button>
+    </div>
+  </form>
+</section>
+
+<!-- 3. PICK SCENE -->
+<section class="screen" id="s-pick" hidden>
+  <div class="pick">
+    <div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px">
+      <h2 id="pick-title"></h2>
+      <button class="pbtn small" id="btn-pick-back">◀ 이름 다시 쓰기</button>
+    </div>
+    <div class="cards" id="cards"></div>
+  </div>
+</section>
+
+<!-- 4. GAME -->
+<section class="screen" id="game" hidden>
+  <div class="hud">
+    <button class="pbtn small" id="btn-quit">◀ 나가기</button>
+    <div class="who"><span id="g-name"></span><small id="g-scene"></small></div>
+    <div class="stat" id="g-timebox"><b id="g-time">0:30</b><small>남은 시간</small></div>
+    <div class="stat"><b id="g-count">0/10</b><small>찾음</small></div>
+    <div class="stat"><b id="g-score">0</b><small>점수</small></div>
+    <button class="pbtn small coral" id="btn-hint">힌트 1회 <span style="font-size:12px">(-30점)</span></button>
+    <button class="pbtn small" id="btn-sound" aria-pressed="true">소리 켬</button>
+  </div>
+  <div class="play">
+    <ul class="tray" id="tray" aria-label="찾을 제품"></ul>
+    <div class="stage-wrap">
+      <div class="stage" id="stage">
+        <canvas id="view"></canvas>
+        <div class="ready outl" id="ready" hidden></div>
+        <div class="zoom">
+          <button class="pbtn" id="z-in" aria-label="확대">+</button>
+          <button class="pbtn" id="z-out" aria-label="축소">−</button>
+          <button class="pbtn" id="z-reset" aria-label="원래 크기" style="font-size:18px">⟲</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen result-screen" id="s-result" hidden aria-label="참여 결과"><div class="result-content" id="sheet" tabindex="-1"></div></section>
+
+<script src="./game.js"></script>
+</body>
+</html>
