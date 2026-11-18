@@ -559,10 +559,17 @@ $('#btn-fs').onclick=()=>{const d=document.documentElement;if(document.fullscree
 
 // entry
 document.querySelectorAll('canvas[data-spr]').forEach(c=>sprCanvas(c,c.dataset.spr));
-$('#entry-form').onsubmit=e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
+$('#entry-form').onsubmit=async e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
   if(!v){$('#name-err').textContent='이름을 입력해 주세요.';$('#name-in').focus();return}
   const digits=$('#phone-last4').value;if(!/^[0-9]{4}$/.test(digits)){$('#name-err').textContent='전화번호 뒤 네 자리를 숫자로 입력해 주세요.';$('#phone-last4').focus();return}
-  phoneLast4=digits;player=v.slice(0,12);participationId=uid();$('#name-err').textContent='';$('#name-in').blur();$('#phone-last4').blur();sBeep(1);openPick()};
+  const name=v.slice(0,12),btn=e.submitter||$('#entry-form button[type=submit]');
+  if(CONFIG.SHEET_URL){btn.disabled=true;$('#name-err').textContent='참여 기록 확인 중…';
+    const res=await checkPlayed(name,digits);btn.disabled=false;
+    if(res==='played'){$('#name-err').textContent='오늘은 이미 참여하셨어요. 게임은 하루 1회만 참여할 수 있어요.';return}
+    if(res!=='ok'){$('#name-err').textContent='참여 기록을 확인하지 못했어요. 인터넷 연결을 확인하고 다시 눌러주세요.';return}}
+  phoneLast4=digits;player=name;participationId=uid();$('#name-err').textContent='';$('#name-in').blur();$('#phone-last4').blur();sBeep(1);openPick()};
+// 당일 1회 참여 확인 (서버 시트 기준)
+async function checkPlayed(name,phone){try{const r=await withTimeout(fetch(CONFIG.SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'check',name,phoneLast4:phone})}),15000);const d=await r.json();if(!r.ok||d.ok!==true)return 'error';return d.played?'played':'ok'}catch(e){return 'error'}}
 $('#phone-last4').oninput=()=>{$('#phone-last4').value=$('#phone-last4').value.replace(/[^0-9]/g,'').slice(0,4);$('#name-err').textContent=''};
 $('#name-in').oninput=()=>{$('#name-err').textContent=''};
 $('#btn-entry-back').onclick=goTitle;
@@ -666,7 +673,7 @@ function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval
  ['newsletter','함께일하는재단','뉴스레터 구독','https://hamkke.org/#stb_subscribe']
 ].map(([id,org,label,url])=>`<a class="qr-card" href="${url}" target="_blank" rel="noopener noreferrer"><span>${org}</span><b>${label}</b><img src="assets/qr-${id}.svg" width="176" height="176" alt="${org} ${label} QR 코드"></a>`).join('')}</div><div id="result-image"></div><p class="save wait" id="save-msg">기록 저장 중…</p>
       <div class="prize-note"><p>숨은그림찾기 참여 후 SNS 팔로우 혹은 재단 뉴스레터 구독 시,</p><p class="prize-claim">경품 뽑기 참여 가능!</p></div>
-      <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small" data-m="again">다시 하기</button><button class="pbtn small coral" data-m="home">처음으로</button></div>`,
+      <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small coral" data-m="home">처음으로</button></div>`,
       act=>{if(act==='download'){saveResultImage(rec);return}if(act==='look')show('game');else if(act==='again'){closeModal();openPick()}else if(act==='home')goTitle()});
     queueRecord(rec).then(async ok=>{const m=$('#save-msg');if(!m)return;
       const {rank,src}=await fetchRank(total);const rk=rank?` · 오늘 ${rank}위`:'';
