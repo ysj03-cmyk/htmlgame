@@ -6,7 +6,7 @@ const CONFIG = {
   EVENT_NAME: '《지역에서 시작된 변화, 당신의 일상으로》',
   GAME_NAME: '우리 일상 속 숨은 사회연대경제 제품 찾기',
   // Google Apps Script 웹앱 주소 (README 2단계). 비워두면 이 기기에만 기록됩니다.
-  SHEET_URL: 'https://script.google.com/macros/s/AKfycbzD_beXqn8d3kTgytpfgbSN-7GsmDJQsx4U_JDCMFDI_JHxwxSH7P63DKLD_oX8iRkJqw/exec',
+  SHEET_URL: 'https://script.google.com/macros/s/AKfycbwB_jKcBu0VAkQjlaJG9XHvUBmKNeFpLQ0VKI7qc7V8a_9_hSu2SrbTaRMjY_ydwPMxXg/exec',
   TIME_LIMIT: 30,        // 제한시간(초)
   IDLE_SEC: 60,          // 이 시간 동안 아무도 안 만지면 처음 화면으로
   RANK_REFRESH_SEC: 60,  // TOP 10 새로고침 주기
@@ -504,15 +504,17 @@ const RANK_STORAGE='expo_scores_'+RANK_ROUND;
 const previousRankRound=store.get('expo_rank_round',null);
 if(previousRankRound!==RANK_ROUND){try{localStorage.removeItem('expo_local_scores');if(previousRankRound)localStorage.removeItem('expo_scores_'+previousRankRound)}catch(e){}store.set('expo_rank_round',RANK_ROUND)}
 const device=(()=>{const q=new URLSearchParams(location.search).get('device');if(q){store.set('expo_device',q);return q}let d=store.get('expo_device',null);if(!d){d='T-'+Math.random().toString(36).slice(2,6).toUpperCase();store.set('expo_device',d)}return d})();
-let pending=store.get('expo_pending',[]);
+const PENDING_STORAGE='expo_pending_event_20261127';
+let pending=store.get(PENDING_STORAGE,[]);
+const queuedParticipations=new Set(pending.map(r=>r.participationId).filter(Boolean));
 function saveLocalScore(rec){const all=store.get(RANK_STORAGE,{});(all[rec.date]=all[rec.date]||[]).push({name:rec.name,score:rec.score,scene:rec.scene,sec:rec.sec,found:rec.found,total:rec.total});store.set(RANK_STORAGE,all)}
 function localTop(date){const list=(store.get(RANK_STORAGE,{})[date]||[]);const best={};list.forEach(e=>{if(!best[e.name]||e.score>best[e.name].score)best[e.name]=e});return Object.values(best).sort((a,b)=>b.score-a.score)}
-function queueRecord(rec){pending.push(rec);store.set('expo_pending',pending);saveLocalScore(rec);return flush()}
+function queueRecord(rec){saveLocalScore(rec);if(!queuedParticipations.has(rec.participationId)){queuedParticipations.add(rec.participationId);pending.push(rec);store.set(PENDING_STORAGE,pending)}return flush()}
 let flushing=null;
 async function flush(){if(!CONFIG.SHEET_URL||!pending.length)return !pending.length;if(flushing)return flushing;
   flushing=(async()=>{for(const rec of [...pending]){try{
       const response=await withTimeout(fetch(CONFIG.SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)}),15000);const ack=await response.json();if(!response.ok||ack.ok!==true)throw new Error('서버 저장 확인 실패');
-      pending=pending.filter(p=>p.id!==rec.id);store.set('expo_pending',pending)}catch(e){break}}
+      pending=pending.filter(p=>p.id!==rec.id);store.set(PENDING_STORAGE,pending)}catch(e){break}}
     flushing=null;return !pending.length})();return flushing}
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
 setInterval(flush,30000);window.addEventListener('online',flush);
@@ -520,9 +522,9 @@ async function fetchRank(score){const top=localTop(today());return{src:'round-lo
 
 /* ---------------- screens ---------------- */
 const SCREENS=['s-title','s-entry','s-pick','game','s-result'];
-let cur='s-title',player='',phoneLast4='';
+let cur='s-title',player='',phoneLast4='',participationId='';
 function show(id){cur=id;SCREENS.forEach(s=>$('#'+s).hidden=s!==id);$('#bg').hidden=id==='game'||id==='s-result';closeModal()}
-function goTitle(){stopGame();player='';phoneLast4='';$('#name-in').value='';$('#phone-last4').value='';show('s-title');loadRank()}
+function goTitle(){stopGame();player='';phoneLast4='';participationId='';$('#name-in').value='';$('#phone-last4').value='';show('s-title');loadRank()}
 
 // title
 $('#t-host').textContent=CONFIG.HOST;$('#t-event').textContent=CONFIG.EVENT_NAME;
@@ -559,7 +561,7 @@ document.querySelectorAll('canvas[data-spr]').forEach(c=>sprCanvas(c,c.dataset.s
 $('#entry-form').onsubmit=e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
   if(!v){$('#name-err').textContent='이름을 입력해 주세요.';$('#name-in').focus();return}
   const digits=$('#phone-last4').value;if(!/^[0-9]{4}$/.test(digits)){$('#name-err').textContent='전화번호 뒤 네 자리를 숫자로 입력해 주세요.';$('#phone-last4').focus();return}
-  phoneLast4=digits;player=v.slice(0,12);$('#name-err').textContent='';$('#name-in').blur();sBeep(1);openPick()};
+  phoneLast4=digits;player=v.slice(0,12);participationId=uid();$('#name-err').textContent='';$('#name-in').blur();sBeep(1);openPick()};
 $('#phone-last4').oninput=()=>{$('#phone-last4').value=$('#phone-last4').value.replace(/[^0-9]/g,'').slice(0,4);$('#name-err').textContent=''};
 $('#name-in').oninput=()=>{$('#name-err').textContent=''};
 $('#btn-entry-back').onclick=goTitle;
@@ -648,7 +650,7 @@ $('#btn-hint').onclick=()=>{if(!G.running||G.done||G.hintUsed)return;const left=
 function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval(G.timer);G.sec=Math.min(CONFIG.TIME_LIMIT,(performance.now()-G.t0)/1000);
   const rem=Math.max(0,CONFIG.TIME_LIMIT-G.sec),bonus=cleared?Math.ceil(rem)*10:0,total=score()+bonus;$('#g-timebox').classList.remove('warn');$('#g-score').textContent=total;
   if(!cleared){$('#g-time').textContent='0:00';G.reveal=true;render();sBad()}else{$('#g-time').textContent=fmt(Math.ceil(rem))}
-  const rec={id:uid(),hintUsed:G.hintUsed,date:today(),time:new Date().toISOString(),name:player,phoneLast4,scene:SCENES[G.key].title,result:cleared?'완료':'시간끝',
+  const rec={id:uid(),participationId,hintUsed:G.hintUsed,date:today(),time:new Date().toISOString(),name:player,phoneLast4,scene:SCENES[G.key].title,result:cleared?'완료':'시간끝',
     found:G.found.size,total:G.items.length,wrong:G.wrong,sec:Math.round(G.sec*10)/10,score:total,device};
   const best=store.get('expo_best',{});const isBest=!best[G.key]||total>best[G.key];if(isBest){best[G.key]=total;store.set('expo_best',best)}
   setTimeout(()=>{if(cleared)sWin();
