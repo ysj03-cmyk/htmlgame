@@ -673,7 +673,7 @@ function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval
  ['newsletter','함께일하는재단','뉴스레터 구독','https://hamkke.org/#stb_subscribe']
 ].map(([id,org,label,url])=>`<a class="qr-card" href="${url}" target="_blank" rel="noopener noreferrer"><span>${org}</span><b>${label}</b><img src="assets/qr-${id}.svg" width="176" height="176" alt="${org} ${label} QR 코드"></a>`).join('')}</div><div id="result-image"></div><p class="save wait" id="save-msg">기록 저장 중…</p>
       <div class="prize-note"><p>숨은그림찾기 참여 후 SNS 팔로우 혹은 재단 뉴스레터 구독 시,</p><p class="prize-claim">경품 뽑기 참여 가능!</p></div>
-      <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small coral" data-m="home">처음으로</button></div>`,
+      <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small" data-m="again">다시 하기</button><button class="pbtn small coral" data-m="home">처음으로</button></div>`,
       act=>{if(act==='download'){saveResultImage(rec);return}if(act==='look')show('game');else if(act==='again'){closeModal();openPick()}else if(act==='home')goTitle()});
     queueRecord(rec).then(async ok=>{const m=$('#save-msg');if(!m)return;
       const {rank,src}=await fetchRank(total);const rk=rank?` · 오늘 ${rank}위`:'';
