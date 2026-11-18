@@ -1,0 +1,4 @@
+Published site version: 32
+Source commit: 7be36ed8deac790a4b0875a54d660bad62d38bb7
+Source site: https://sse-expo-hidden-discover.independentridge2.chatgpt.site/
+Export: HTML, CSS and JavaScript separated; fonts bundled locally.
