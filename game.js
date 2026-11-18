@@ -506,10 +506,9 @@ if(previousRankRound!==RANK_ROUND){try{localStorage.removeItem('expo_local_score
 const device=(()=>{const q=new URLSearchParams(location.search).get('device');if(q){store.set('expo_device',q);return q}let d=store.get('expo_device',null);if(!d){d='T-'+Math.random().toString(36).slice(2,6).toUpperCase();store.set('expo_device',d)}return d})();
 const PENDING_STORAGE='expo_pending_event_20261127';
 let pending=store.get(PENDING_STORAGE,[]);
-const queuedParticipations=new Set(pending.map(r=>r.participationId).filter(Boolean));
 function saveLocalScore(rec){const all=store.get(RANK_STORAGE,{});(all[rec.date]=all[rec.date]||[]).push({name:rec.name,score:rec.score,scene:rec.scene,sec:rec.sec,found:rec.found,total:rec.total});store.set(RANK_STORAGE,all)}
 function localTop(date){const list=(store.get(RANK_STORAGE,{})[date]||[]);const best={};list.forEach(e=>{if(!best[e.name]||e.score>best[e.name].score)best[e.name]=e});return Object.values(best).sort((a,b)=>b.score-a.score)}
-function queueRecord(rec){saveLocalScore(rec);if(!queuedParticipations.has(rec.participationId)){queuedParticipations.add(rec.participationId);pending.push(rec);store.set(PENDING_STORAGE,pending)}return flush()}
+function queueRecord(rec){saveLocalScore(rec);if(!pending.some(r=>r.id===rec.id)){pending.push(rec);store.set(PENDING_STORAGE,pending)}return flush()}
 let flushing=null;
 async function flush(){if(!CONFIG.SHEET_URL||!pending.length)return !pending.length;if(flushing)return flushing;
   flushing=(async()=>{for(const rec of [...pending]){try{
@@ -552,7 +551,7 @@ function rankResult(entry){
 async function loadRank(){const {src,top}=await fetchRank();const ol=$('#rank-list');
  if(src!=='shared'){ol.innerHTML='<li class="empty" style="display:block">전체 순위를 불러오지 못했어요.</li>';$('#rank-note').textContent='※ 인터넷 연결 또는 순위 서비스 설정을 확인해주세요.';return}
  ol.innerHTML=top.length?top.slice(0,10).map((e,i)=>`<li><span class="no">${i+1}</span><span class="rank-name" title="${esc(e.name)}">${esc(e.name)}</span><span class="rank-result">${esc(rankResult(e))}</span></li>`).join(''):'<li class="empty" style="display:block">아직 오늘의 기록이 없어요. 첫 주인공이 되어 보세요!</li>';
- $('#rank-note').textContent='※ 오늘 전체 참여자 · 점수순 · 하루 첫 게임 기준';
+ $('#rank-note').textContent='※ 오늘 전체 참여자 · 점수순 · 1인 최고 기록';
 }
 setInterval(()=>{if(cur==='s-title')loadRank()},CONFIG.RANK_REFRESH_SEC*1000);
 $('#btn-start').onclick=async()=>{const b=$('#btn-start'),old=b.innerHTML;b.disabled=true;b.textContent='그림 준비 중…';try{await loadArtwork();sBeep(1);show('s-entry');setTimeout(()=>$('#name-in').focus(),50);$('#art-notice')?.remove()}catch(e){let note=$('#art-notice');if(!note){note=document.createElement('p');note.id='art-notice';note.setAttribute('role','status');note.style.cssText='color:#fff;background:#2b2340cc;padding:6px 10px;font-size:14px';b.after(note)}note.textContent='그림을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시작해 주세요.'}finally{b.disabled=false;b.innerHTML=old}};
@@ -563,7 +562,7 @@ document.querySelectorAll('canvas[data-spr]').forEach(c=>sprCanvas(c,c.dataset.s
 $('#entry-form').onsubmit=e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
   if(!v){$('#name-err').textContent='이름을 입력해 주세요.';$('#name-in').focus();return}
   const digits=$('#phone-last4').value;if(!/^[0-9]{4}$/.test(digits)){$('#name-err').textContent='전화번호 뒤 네 자리를 숫자로 입력해 주세요.';$('#phone-last4').focus();return}
-  phoneLast4=digits;player=v.slice(0,12);participationId=uid();$('#name-err').textContent='';$('#name-in').blur();sBeep(1);openPick()};
+  phoneLast4=digits;player=v.slice(0,12);participationId=uid();$('#name-err').textContent='';$('#name-in').blur();$('#phone-last4').blur();sBeep(1);openPick()};
 $('#phone-last4').oninput=()=>{$('#phone-last4').value=$('#phone-last4').value.replace(/[^0-9]/g,'').slice(0,4);$('#name-err').textContent=''};
 $('#name-in').oninput=()=>{$('#name-err').textContent=''};
 $('#btn-entry-back').onclick=goTitle;
@@ -616,6 +615,8 @@ function render(){const v=G.vb;vctx.imageSmoothingEnabled=true;vctx.imageSmoothi
   if(!base)return;const bg=ART_IMAGES[G.key];vctx.drawImage(bg,v.x/W*bg.width,v.y/H*bg.height,v.w/W*bg.width,v.h/H*bg.height,0,0,view.width,view.height);G.items.forEach((it,i)=>{const x=(it.x-v.x)/v.w*view.width,y=(it.y-v.y)/v.h*view.height,w=it.w/v.w*view.width,h=it.h/v.h*view.height;vctx.save();vctx.fillStyle='rgba(53,35,22,.16)';vctx.beginPath();vctx.ellipse(x+w/2,y+h-1,w*.35,Math.max(1.2,h*.025),0,0,Math.PI*2);vctx.fill();vctx.restore();drawSharedProduct(vctx,i,x,y,w,h)});drawMarks();vctx.drawImage(marks,v.x,v.y,v.w,v.h,0,0,view.width,view.height)}
 function resize(){const r=stage.getBoundingClientRect(),dpr=window.devicePixelRatio||1;view.width=Math.max(1,Math.round(r.width*dpr));view.height=Math.max(1,Math.round(r.height*dpr));render()}
 window.addEventListener('resize',()=>{if(cur==='game')resize()});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{if(cur==='game')resize()}).observe(stage);
+window.visualViewport?.addEventListener('resize',()=>{if(cur==='game')resize()});
 function setVB(v){const w=clamp(v.w,W/5,W),h=w*H/W;G.vb={x:clamp(v.x,0,W-w),y:clamp(v.y,0,H-h),w,h};render()}
 function toDot(cx,cy,vb=G.vb){const r=view.getBoundingClientRect();return{x:vb.x+(cx-r.left)/r.width*vb.w,y:vb.y+(cy-r.top)/r.height*vb.h}}
 function zoomAt(newW,anchor,baseVB,curPt){const r=view.getBoundingClientRect();const a=toDot(anchor.x,anchor.y,baseVB);const w=clamp(newW,W/5,W),h=w*H/W;setVB({x:a.x-(curPt.x-r.left)/r.width*w,y:a.y-(curPt.y-r.top)/r.height*h,w,h})}
