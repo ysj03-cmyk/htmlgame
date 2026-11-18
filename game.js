@@ -518,7 +518,9 @@ async function flush(){if(!CONFIG.SHEET_URL||!pending.length)return !pending.len
     flushing=null;return !pending.length})();return flushing}
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
 setInterval(flush,30000);window.addEventListener('online',flush);
-async function fetchRank(score){const top=localTop(today());return{src:'round-local',top,rank:score!=null?1+top.filter(e=>e.score>score).length:null}}
+let rankInFlight=null;
+function fetchRank(){if(rankInFlight)return rankInFlight;rankInFlight=new Promise(resolve=>{const callback='sseRank_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2),script=document.createElement('script');let timer;const done=result=>{clearTimeout(timer);delete window[callback];script.remove();resolve(result)};window[callback]=data=>{if(!data||data.ok!==true||!Array.isArray(data.top)){done({src:'error',top:[],rank:null});return}done({src:'shared',top:data.top,day:data.day,rank:null})};script.onerror=()=>done({src:'error',top:[],rank:null});timer=setTimeout(()=>done({src:'error',top:[],rank:null}),15000);script.src=CONFIG.SHEET_URL+'?action=rank&callback='+callback+'&_='+Date.now();document.head.appendChild(script)}).finally(()=>{rankInFlight=null});return rankInFlight}
+
 
 /* ---------------- screens ---------------- */
 const SCREENS=['s-title','s-entry','s-pick','game','s-result'];
@@ -547,10 +549,10 @@ function rankResult(entry){
  const foundText=validRankNumber(found)?Number(found)+'개':'개수 미기록';
  return secText+' · '+foundText;
 }
-async function loadRank(){const {src,top}=await fetchRank(null);const ol=$('#rank-list');
- ol.innerHTML=top.length?top.slice(0,10).map((e,i)=>`<li><span class="no">${i+1}</span><span class="rank-name" title="${esc(e.name)}">${esc(e.name)}</span><span class="rank-result">${esc(rankResult(e))}</span></li>`).join(''):'<li class="empty" style="display:block">아직 기록이 없어요. 첫 주인공이 되어 보세요!</li>';
- const missing=top.some(e=>!validRankNumber(e.sec??e.seconds??e.elapsedSeconds)||!validRankNumber(e.found??e.foundCount));
- $('#rank-note').textContent='※ 새 회차 · 현재 기기 기록 기준'+(missing?' ※ 상세 정보가 없는 이전 기록은 미기록으로 표시해요.':'');
+async function loadRank(){const {src,top}=await fetchRank();const ol=$('#rank-list');
+ if(src!=='shared'){ol.innerHTML='<li class="empty" style="display:block">전체 순위를 불러오지 못했어요.</li>';$('#rank-note').textContent='※ 인터넷 연결 또는 순위 서비스 설정을 확인해주세요.';return}
+ ol.innerHTML=top.length?top.slice(0,10).map((e,i)=>`<li><span class="no">${i+1}</span><span class="rank-name" title="${esc(e.name)}">${esc(e.name)}</span><span class="rank-result">${esc(rankResult(e))}</span></li>`).join(''):'<li class="empty" style="display:block">아직 오늘의 기록이 없어요. 첫 주인공이 되어 보세요!</li>';
+ $('#rank-note').textContent='※ 오늘 전체 참여자 · 점수순 · 하루 첫 게임 기준';
 }
 setInterval(()=>{if(cur==='s-title')loadRank()},CONFIG.RANK_REFRESH_SEC*1000);
 $('#btn-start').onclick=async()=>{const b=$('#btn-start'),old=b.innerHTML;b.disabled=true;b.textContent='그림 준비 중…';try{await loadArtwork();sBeep(1);show('s-entry');setTimeout(()=>$('#name-in').focus(),50);$('#art-notice')?.remove()}catch(e){let note=$('#art-notice');if(!note){note=document.createElement('p');note.id='art-notice';note.setAttribute('role','status');note.style.cssText='color:#fff;background:#2b2340cc;padding:6px 10px;font-size:14px';b.after(note)}note.textContent='그림을 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시작해 주세요.'}finally{b.disabled=false;b.innerHTML=old}};
