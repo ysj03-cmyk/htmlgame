@@ -413,3 +413,7 @@ html{height:100%;height:-webkit-fill-available}
 #bg{image-rendering:auto}
 #s-title .title-purpose{font-family:ResultSans,'Noto Sans KR',sans-serif;color:#000;font-weight:700;text-shadow:none;font-size:calc(clamp(12px,2.15vh,19px)*var(--hero-fit,1));line-height:1.6;letter-spacing:0}
 @media(max-width:600px){#s-title .title-purpose{font-size:12px;line-height:1.65;white-space:normal}}
+
+/* Dedicated bold face avoids relying on inherited font matching. */
+@font-face{font-family:PurposeBold;src:url('assets/result-bold.otf') format('opentype');font-style:normal;font-weight:700;font-display:swap}
+#s-title .title-purpose{font-family:PurposeBold,'Noto Sans KR',sans-serif;font-weight:700;color:#000;-webkit-text-stroke:.28px currentColor;text-shadow:none}
