@@ -525,13 +525,19 @@ const PENDING_STORAGE='expo_pending_event_20261127';
 let pending=store.get(PENDING_STORAGE,[]);
 function saveLocalScore(rec){const all=store.get(RANK_STORAGE,{});(all[rec.date]=all[rec.date]||[]).push({name:rec.name,score:rec.score,scene:rec.scene,sec:rec.sec,found:rec.found,total:rec.total});store.set(RANK_STORAGE,all)}
 function localTop(date){const list=(store.get(RANK_STORAGE,{})[date]||[]);const best={};list.forEach(e=>{if(!best[e.name]||e.score>best[e.name].score)best[e.name]=e});return Object.values(best).sort((a,b)=>b.score-a.score)}
-function queueRecord(rec){saveLocalScore(rec);if(!pending.some(r=>r.id===rec.id)){pending.push(rec);store.set(PENDING_STORAGE,pending)}return flush()}
-let flushing=null;
-async function flush(){if(!CONFIG.SHEET_URL||!pending.length)return !pending.length;if(flushing)return flushing;
-  flushing=(async()=>{for(const rec of [...pending]){try{
-      const response=await withTimeout(fetch(CONFIG.SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)}),15000);const ack=await response.json();if(!response.ok||ack.ok!==true)throw new Error('서버 저장 확인 실패');
-      pending=pending.filter(p=>p.id!==rec.id);store.set(PENDING_STORAGE,pending)}catch(e){break}}
-    flushing=null;return !pending.length})();return flushing}
+function queueRecord(rec){saveLocalScore(rec);if(!pending.some(r=>r.id===rec.id)){pending.push(rec);store.set(PENDING_STORAGE,pending)}return flush().then(()=>!pending.some(r=>r.id===rec.id))}
+let flushing=null,lastSaveError='';
+const saveErrors=new Map();
+async function flush(){if(!CONFIG.SHEET_URL||!pending.length)return !pending.length;if(flushing){await flushing;if(!pending.length)return true;return flush()}
+  flushing=(async()=>{for(const rec of [...pending].reverse()){try{
+      const response=await withTimeout(fetch(CONFIG.SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(rec)}),35000);
+      let ack;try{ack=await response.json()}catch(e){throw new Error('서버가 저장 결과를 보내지 않았습니다. 웹 앱 배포 설정을 확인해주세요.')}
+      if(!response.ok||ack.ok!==true)throw new Error(ack.error||'서버 저장 확인 실패');
+      pending=pending.filter(p=>p.id!==rec.id);saveErrors.delete(rec.id);store.set(PENDING_STORAGE,pending)
+    }catch(e){lastSaveError=e.message==='timeout'?'서버 응답 시간이 초과됐습니다.':e instanceof TypeError?'서버에 연결하지 못했습니다. 인터넷 연결과 웹 앱 공개 설정을 확인해주세요.':String(e.message||'서버 저장 확인 실패').slice(0,180);saveErrors.set(rec.id,lastSaveError)}}
+    return !pending.length})();
+  try{return await flushing}finally{flushing=null}
+}
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
 setInterval(flush,30000);window.addEventListener('online',flush);
 let rankInFlight=null;
@@ -550,6 +556,24 @@ $('#t-game').innerHTML='우리 일상 속 숨은 <span class="hl">사회연대�
 document.title=CONFIG.GAME_NAME;
 // Cover artwork has its own clear title area; no pixel scenery or floating sprites.
 const coverCanvas=$('#bg');coverCanvas.width=1600;coverCanvas.height=1000;
+
+const COVER_LABELS={
+ wide:[[588,651,1,0],[670,656,1,-7],[756,700,1,0],[839,653,1,4],[687,711,1,-9]],
+ medium:[[341,871,1,0],[418,875,1,-7],[503,915,1,0],[579,874,1,4],[433,927,1,-9]],
+ portrait:[[255,1161,1.3,0],[354,1167,1.3,-7],[465,1222,1.3,0],[565,1168,1.3,4],[375,1235,1.3,-9]]
+};
+function drawCoverLabels(ctx,mode,scale,dx,dy){
+ const labels=COVER_LABELS[mode];if(!labels)return;
+ const specs=[
+  {w:46,h:25,bg:'#7d491e',lines:[['제주밥씸',-5,7.6,'#fff6dd'],['약식누룽지',5.5,7.2,'#fff6dd']]},
+  {w:32,h:21,bg:'#fff7dd',lines:[['새싹품은',-4.8,5.8,'#3b692c'],['사과주스',4,7,'#c83023']]},
+  {w:46,h:38,bg:'#285f13',lines:[['BROWN',-10.3,8,'#fff6d6'],['RICE',-.8,8,'#fff6d6'],['초코미 샌드',10.5,5.7,'#ffe23d']]},
+  {w:41,h:25,bg:'#51351e',lines:[['DMZ',-4.2,9.3,'#fff3da'],['CHOCOLATE',5.3,4.8,'#fff3da']]},
+  {w:40,h:18,bg:'#f9e5c8',lines:[['카라멜',.2,8.5,'#71411f']]}
+ ];
+ labels.forEach(([x,y,z,angle],i)=>{const p=specs[i];ctx.save();ctx.translate(dx+x*scale,dy+y*scale);ctx.rotate(angle*Math.PI/180);ctx.scale(scale*z,scale*z);ctx.fillStyle=p.bg;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.textAlign='center';ctx.textBaseline='middle';p.lines.forEach(([text,ty,size,color])=>{ctx.font='700 '+(size*1.08)+'px ResultSans';ctx.fillStyle=color;ctx.fillText(text,0,ty,p.w-1)});ctx.restore()});
+}
+
 function paintTitle(){
  const c=$('#bg'),image=ART_IMAGES.title;if(!image)return;
  const vw=Math.max(1,window.innerWidth),vh=Math.max(1,window.innerHeight),dpr=Math.min(3,window.devicePixelRatio||1);
@@ -558,6 +582,7 @@ function paintTitle(){
  const scale=Math.max(c.width/sw,c.height/sh),w=sw*scale,h=sh*scale;
  ctx.clearRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
  ctx.drawImage(image,(c.width-w)/2,(c.height-h)/2,w,h);
+ drawCoverLabels(ctx,activeTitleMode,scale,(c.width-w)/2,(c.height-h)/2);
 }
 function placeTitleContent(){
  const hero=$('#s-title .title-main');if(!hero||$('#s-title').hidden)return;
@@ -576,6 +601,7 @@ function placeTitleContent(){
  }
  hero.style.top=Math.round(Math.max(14+height/2,Math.min(vh*.40,bottom-height/2)))+'px';
 }
+document.fonts?.load('700 12px ResultSans').then(()=>{if(ART_IMAGES.title)paintTitle()}).catch(()=>{});
 let titleResizeTimer;window.addEventListener('resize',()=>{requestAnimationFrame(placeTitleContent);clearTimeout(titleResizeTimer);titleResizeTimer=setTimeout(()=>{if(cur!=='game'&&cur!=='s-result')loadTitleArtwork().catch(()=>{})},120)});
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>requestAnimationFrame(placeTitleContent));
 
@@ -716,7 +742,7 @@ function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval
       const {rank,src}=await fetchRank(total);const rk=rank?` · 오늘 ${rank}위`:'';
       if(!CONFIG.SHEET_URL){m.className='save ok';m.textContent='이 기기에 기록했어요'+rk}
       else if(ok){m.className='save ok';m.textContent='기록 저장 완료'+rk}
-      else{m.className='save err';m.textContent='서버 저장 미확인 · 이 기기에 보관 후 자동 재시도'+rk}});
+      else{m.className='save err';m.textContent='기록 저장 대기 · '+(saveErrors.get(rec.id)||lastSaveError||'서버 응답을 확인하지 못했습니다.')+' · 이 기기에 보관 후 자동 재시도'+rk}});
   },cleared?500:900)}
 $('#btn-quit').onclick=()=>{stopGame();openPick()};
 const sb=$('#btn-sound');const syncSound=()=>{sb.textContent=soundOn?'소리 켬':'소리 끔';sb.setAttribute('aria-pressed',soundOn)};syncSound();
