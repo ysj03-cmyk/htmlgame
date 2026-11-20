@@ -147,7 +147,7 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 .modal a.pbtn{flex-wrap:wrap;padding:8px 10px;line-height:1.5;font-size:clamp(12px,2.8vw,16px)} @media(min-width:1000px){#s-title .title-main{transform:translateX(clamp(12px,2vw,32px))}}
 .tray li canvas{image-rendering:auto} 
 /* One full-screen cover, with the hero centered independently from the leaderboard. */
-#bg{background:#a8bb83 url('assets/title-art.png?v=20261118-scene-adjustments') center/cover no-repeat;image-rendering:auto}
+#bg{background:#a8bb83 url('assets/title-medium.webp?v=41') center/cover no-repeat;image-rendering:auto}
 #s-title{display:block}
 #s-title::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 43% 34% at 50% 50%,rgba(25,60,37,.22),transparent 100%);pointer-events:none}
 #s-title .title-wrap{display:block;position:static;width:100%;height:100%;margin:0;padding:0}
@@ -336,4 +336,74 @@ html{height:100%;height:-webkit-fill-available}
  #s-title #t-game{font-size:28px;white-space:normal}#s-title #t-host{font-size:13px}#s-title #t-event{font-size:18px}#s-title .title-purpose{font-size:13px;white-space:normal}
  #s-title #rank-box{position:relative;inset:auto;transform:none;max-height:none;margin:20px auto 40px}
  #s-title .title-wrap{display:flex;flex-direction:column;height:auto;min-height:100%}
+}
+
+
+/* Keep the picnic products in frame, including short desktop windows. */
+@media(max-aspect-ratio:8/5){#bg{object-fit:contain;background-size:contain;background-color:#a8bb83}}
+#bg{object-position:center bottom;background-position:center bottom}
+@media(max-width:1000px){#bg{object-fit:contain;object-position:center bottom;background-size:contain;background-position:center bottom;background-color:#a8bb83}}
+#game .tray{overflow-y:auto;min-height:0;overscroll-behavior:contain}
+.product-description{display:block;font-family:ResultSans,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:10px;line-height:1.5;font-weight:400;color:#655e70;word-break:keep-all;overflow-wrap:anywhere;margin-bottom:3px}
+.product-label>span:last-child{font-size:14px;font-weight:700;line-height:1.4}
+#game .tray li{align-items:center}
+.result-content .result-qr-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-width:680px}
+#pick-title{word-break:keep-all;overflow-wrap:anywhere;line-height:1.55}
+@media(max-width:999px){
+ .product-description{font-size:10px;line-height:1.45}.product-label>span:last-child{font-size:12px}
+ #game .tray li{min-height:72px}.pick h2{font-size:20px}
+ .result-content .result-qr-grid{grid-template-columns:1fr;max-width:420px}
+}
+@media(max-width:1100px) and (max-height:540px) and (orientation:landscape){.product-description{font-size:9px}.product-label>span:last-child{font-size:11px}}
+
+
+/* Full-bleed cover with the picnic anchored at the bottom. */
+#bg{object-fit:cover;object-position:center bottom;background-size:cover;background-position:center bottom}
+#s-title .t-start{font-size:clamp(22px,2.1vw,29px);min-height:44px;padding:5px 20px;margin-top:4px;animation:none}
+@media(min-width:1001px){
+ #s-title .title-main{gap:clamp(8px,1.5vh,16px);top:40%;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding:2px 5px 6px}
+ #s-title #t-host{font-size:clamp(14px,2.6vh,25px);padding:5px 12px;line-height:1.4}
+ #s-title #t-event{font-size:clamp(18px,3.4vh,34px);line-height:1.45}
+ #s-title #t-game{font-size:clamp(25px,min(3.55vw,5.2vh),56px);line-height:1.35}
+ #s-title .title-purpose{font-size:clamp(12px,2.2vh,19px);line-height:1.6}
+}
+@media(max-width:1000px){
+ #s-title .title-wrap{padding-top:clamp(14px,4vh,32px)}
+ #s-title .title-main{margin-block:0;gap:12px}
+ #s-title .t-start{min-height:44px;font-size:24px;padding:5px 20px}
+}
+@media(max-width:600px){#bg{object-position:32% bottom;background-position:32% bottom}}
+
+
+/* Display the complete cover artwork, with softly extended edges. */
+#bg{object-fit:contain;object-position:center center;background:none}
+
+
+/* Native illustrated compositions fill each screen; no letterboxing or blur. */
+#bg{object-fit:cover;object-position:center;background:#a8bb83 url('assets/title-medium.webp?v=41') center/cover no-repeat}
+@media(min-aspect-ratio:3/2){#bg{background-image:url('assets/title-wide.webp?v=41')}}
+@media(max-aspect-ratio:4/5){#bg{background-image:url('assets/title-portrait.webp?v=41')}}
+
+
+/* The start button is never clipped inside a height-limited hero. */
+#s-title .title-main{overflow:visible;max-height:none}
+#s-title .title-main>*{flex-shrink:0}
+#s-title .t-start{line-height:1.1;min-height:44px}
+@media(min-width:1001px){
+ #s-title .title-main{gap:calc(clamp(8px,1.5vh,16px)*var(--hero-fit,1));padding:2px 8px 10px}
+ #s-title #t-host{font-size:calc(clamp(14px,2.6vh,25px)*var(--hero-fit,1));padding:calc(5px*var(--hero-fit,1)) 12px}
+ #s-title #t-event{font-size:calc(clamp(18px,3.4vh,34px)*var(--hero-fit,1))}
+ #s-title #t-game{font-size:calc(clamp(25px,min(3.55vw,5.2vh),56px)*var(--hero-fit,1))}
+ #s-title .title-purpose{font-size:calc(clamp(12px,2.2vh,19px)*var(--hero-fit,1))}
+}
+
+
+/* Product descriptions stay fully visible on one line above the name. */
+#game .product-label{flex:1;min-width:0}
+#game .product-description{white-space:nowrap;word-break:normal;overflow-wrap:normal;font-size:10px;line-height:1.5}
+@media(min-width:1000px){#game .play{grid-template-columns:280px minmax(0,1fr)}}
+@media(max-width:999px) and (orientation:portrait){#game .tray{grid-template-columns:1fr}}
+@media(max-width:1100px) and (max-height:540px) and (orientation:landscape){
+ #game .play{grid-template-columns:230px minmax(0,1fr)}
+ #game .product-description{font-size:9px}
 }

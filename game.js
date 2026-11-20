@@ -64,8 +64,9 @@ const SPR={
  star:['.....kk.....','....kyyk....','....kyyk....','kkkkkyykkkkk','kyyyyyyyyyok','.kyyyyyyyok.','..kyyyyyok..','..kyyyyyyk..','.kyyokkyyok.','.kook..kook.','.kk......kk.'],
  starOff:['.....kk.....','....kSSk....','....kSSk....','kkkkkSSkkkkk','kSSSSSSSSSSk','.kSSSSSSSSk.','..kSSSSSSk..','..kSSSSSSk..','.kSSSkkSSSk.','.kSSk..kSSk.','.kk......kk.'],
 };
-const NAMES={jam:'초코미 샌드',tote:'친환경 생활용품',giftbox:'수공예 제품',detergent:'삼각 초콜릿 2종 선물세트',upcycle:'업사이클링 제품',
- soap:'수제 비누',tumbler:'새싹품은 사과주스',honey:'제주밥씸약식누룽지',toothbrush:'아차산 할매니얼 카라멜',scrubber:'천연 수세미',
+const PRODUCT_DESCRIPTIONS={soap:'취약계층과 함께 만드는 친환경',giftbox:'지역 어르신의 손끝에서 완성되는',tote:'숙박업소에서 버려지는 린덴시트를 활용한',upcycle:'버려진 청바지를 활용한',scrubber:'미세플라스틱 걱정 없는'};
+const NAMES={jam:'초코미 샌드',tote:'친환경 생활용품',giftbox:'수공예 소품',detergent:'삼각 초콜릿 2종 선물세트',upcycle:'업사이클링 제품',
+ soap:'수제비누',tumbler:'새싹품은 사과주스',honey:'제주밥씸약식누룽지',toothbrush:'아차산 할매니얼 카라멜',scrubber:'천연 수세미',
  bread:'지역 특산물 식품',coffee:'커피·음료 제품',vase:'공예 제품',lotion:'생활용품',paperbag:'업사이클링 종이가방',
  cookie:'수제 쿠키',beans:'원두 봉투',candle:'수제 캔들',mitten:'손뜨개 장갑',notebook:'재생지 노트',
  solar:'에너지 절감 제품',ecocup:'친환경 컵',pickles:'지역 농산물 가공식품',recyclebag:'재활용 소재 제품',sprout:'친환경 기술 서비스',
@@ -484,14 +485,30 @@ const HIDE={
 Object.keys(SCENES).forEach(k=>HIDE[k]={crate:null,fg(){}});
 const PRODUCT_ATLAS_RECTS=[[53,109,301,219],[431,120,328,212],[830,52,315,309],[1240,77,297,281],[1639,48,291,314],[47,502,317,209],[505,425,203,332],[846,450,288,290],[1229,439,319,302],[1616,505,324,190]];
 const sceneCache={};
+const BASKET_RECT=[107,13,1040,1179];
 const ART_IMAGES={};let artPromise=null;
 function readArtworkImage(path){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('그림을 불러오지 못했어요.'));im.src=path})}
-async function loadArtwork(){if(artPromise)return artPromise;artPromise=(async()=>{const names=['title','market','park','town','kintex','products'];const images=await Promise.all(names.map(k=>ART_IMAGES[k]||readArtworkImage(k==='products'?'assets/products-shared.png?v=20261118-scene-adjustments':'assets/'+k+'-art.png?v=20261118-scene-adjustments')));names.forEach((k,i)=>ART_IMAGES[k]=images[i]);paintTitle();Object.keys(sceneCache).forEach(k=>delete sceneCache[k]);return true})().catch(e=>{artPromise=null;throw e});return artPromise}
-function sharedProductRect(scene,i){const[x,y,w,h]=scene.targets[i],[,,aw,ah]=PRODUCT_ATLAS_RECTS[i],fit=Math.min(w/aw,h/ah);return[x+(w-aw*fit)/2,y+h-ah*fit,aw*fit,ah*fit]}
-function drawSharedProduct(ctx,i,x,y,w,h){const atlas=ART_IMAGES.products;if(!atlas)throw Error('제품 이미지를 준비하고 있어요.');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(atlas,...PRODUCT_ATLAS_RECTS[i],x,y,w,h)}
+const TITLE_LAYOUTS={wide:{top:.23,bottom:.59},medium:{top:.33,bottom:.59},portrait:{top:.29,bottom:.65}};
+const titlePromises={};let activeTitleMode='medium';
+function titleCoverMode(){const ratio=window.innerWidth/window.innerHeight;return ratio>=1.5?'wide':ratio<=.8?'portrait':'medium'}
+async function loadTitleArtwork(){
+ const mode=titleCoverMode();
+ if(!titlePromises[mode])titlePromises[mode]=readArtworkImage('assets/title-'+mode+'.webp?v=41').catch(error=>{delete titlePromises[mode];throw error});
+ const image=await titlePromises[mode];
+ if(mode===titleCoverMode()){activeTitleMode=mode;ART_IMAGES.title=image;paintTitle();requestAnimationFrame(placeTitleContent)}
+ return image;
+}
+async function loadArtwork(){if(artPromise)return artPromise;artPromise=(async()=>{
+ const names=['market','park','town','kintex','products','basket'];
+ const [images]=await Promise.all([Promise.all(names.map(k=>ART_IMAGES[k]||readArtworkImage(k==='products'?'assets/products-shared.webp?v=20261118-product-refresh':k==='basket'?'assets/yellow-basket.webp?v=40':'assets/'+k+'-art.webp?v=20261118-product-refresh'))),loadTitleArtwork()]);
+ names.forEach((k,i)=>ART_IMAGES[k]=images[i]);Object.keys(sceneCache).forEach(k=>delete sceneCache[k]);return true;
+ })().catch(error=>{artPromise=null;throw error});return artPromise}
+
+function sharedProductRect(scene,i){const[x,y,w,h]=scene.targets[i],[,,aw,ah]=i===2?BASKET_RECT:PRODUCT_ATLAS_RECTS[i],fit=Math.min(w/aw,h/ah);return[x+(w-aw*fit)/2,y+h-ah*fit,aw*fit,ah*fit]}
+function drawSharedProduct(ctx,i,x,y,w,h){const atlas=i===2?ART_IMAGES.basket:ART_IMAGES.products;if(!atlas)throw Error('제품 이미지를 준비하고 있어요.');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(atlas,...(i===2?BASKET_RECT:PRODUCT_ATLAS_RECTS[i]),x,y,w,h)}
 function sceneCanvas(key,withItems){if(sceneCache[key])return sceneCache[key];const bg=ART_IMAGES[key];if(!bg)throw Error('그림을 준비하고 있어요.');const c=mkCanvas(bg.naturalWidth||bg.width,bg.naturalHeight||bg.height),ctx=c.getContext('2d'),scene=SCENES[key];ctx.drawImage(bg,0,0);scene.targets.forEach((_,i)=>{const[x,y,w,h]=sharedProductRect(scene,i),dx=x/scene.pixels[0]*c.width,dy=y/scene.pixels[1]*c.height,dw=w/scene.pixels[0]*c.width,dh=h/scene.pixels[1]*c.height;ctx.save();ctx.fillStyle='rgba(53,35,22,.16)';ctx.beginPath();ctx.ellipse(dx+dw/2,dy+dh-1,dw*.35,Math.max(1.2,dh*.025),0,0,Math.PI*2);ctx.fill();ctx.restore();drawSharedProduct(ctx,i,dx,dy,dw,dh)});return sceneCache[key]=c}
 function productBounds(scene,i){const[x,y,w,h]=sharedProductRect(scene,i),[sw,sh]=scene.pixels;return{k:IKEYS[i],x:x/sw*240,y:y/sh*150,w:w/sw*240,h:h/sh*150}}
-function sprCanvas(el,k){if(!IKEYS.includes(k)){el.width=12;el.height=12;const t=T(el.getContext('2d'));t.spr(SPR[k],Math.floor((12-sprW(k))/2),Math.floor((12-sprH(k))/2));return}el.width=128;el.height=128;const i=IKEYS.indexOf(k),[,,w,h]=PRODUCT_ATLAS_RECTS[i],fit=Math.min(114/w,114/h);drawSharedProduct(el.getContext('2d'),i,(128-w*fit)/2,(128-h*fit)/2,w*fit,h*fit)}
+function sprCanvas(el,k){if(!IKEYS.includes(k)){el.width=12;el.height=12;const t=T(el.getContext('2d'));t.spr(SPR[k],Math.floor((12-sprW(k))/2),Math.floor((12-sprH(k))/2));return}el.width=128;el.height=128;const i=IKEYS.indexOf(k),[,,w,h]=i===2?BASKET_RECT:PRODUCT_ATLAS_RECTS[i],fit=Math.min(114/w,114/h);drawSharedProduct(el.getContext('2d'),i,(128-w*fit)/2,(128-h*fit)/2,w*fit,h*fit)}
 
 /* ---------------- sound ---------------- */
 let actx=null,soundOn=store.get('expo_sound',true);
@@ -525,7 +542,7 @@ function fetchRank(){if(rankInFlight)return rankInFlight;rankInFlight=new Promis
 const SCREENS=['s-title','s-entry','s-pick','game','s-result'];
 let cur='s-title',player='',phoneLast4='',participationId='';
 function show(id){cur=id;SCREENS.forEach(s=>$('#'+s).hidden=s!==id);$('#bg').hidden=id==='game'||id==='s-result';closeModal()}
-function goTitle(){stopGame();player='';phoneLast4='';participationId='';$('#name-in').value='';$('#phone-last4').value='';show('s-title');loadRank()}
+function goTitle(){stopGame();player='';phoneLast4='';participationId='';$('#name-in').value='';$('#phone-last4').value='';show('s-title');requestAnimationFrame(placeTitleContent);loadTitleArtwork().catch(()=>{});loadRank()}
 
 // title
 $('#t-host').textContent=CONFIG.HOST;$('#t-event').textContent=CONFIG.EVENT_NAME;
@@ -534,6 +551,26 @@ document.title=CONFIG.GAME_NAME;
 // Cover artwork has its own clear title area; no pixel scenery or floating sprites.
 const coverCanvas=$('#bg');coverCanvas.width=1600;coverCanvas.height=1000;
 function paintTitle(){const c=$('#bg');if(ART_IMAGES.title){c.width=ART_IMAGES.title.naturalWidth||ART_IMAGES.title.width;c.height=ART_IMAGES.title.naturalHeight||ART_IMAGES.title.height}const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(ART_IMAGES.title){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(ART_IMAGES.title,0,0,c.width,c.height)}}
+function placeTitleContent(){
+ const hero=$('#s-title .title-main');if(!hero||$('#s-title').hidden)return;
+ hero.style.maxHeight='none';hero.style.setProperty('--hero-fit','1');
+ if(window.innerWidth<=1000){hero.style.top='';return}
+ const image=ART_IMAGES.title,sw=image?(image.naturalWidth||image.width):1254,sh=image?(image.naturalHeight||image.height):1254;
+ const vw=window.innerWidth,vh=window.innerHeight,scale=Math.max(vw/sw,vh/sh),offsetY=(vh-sh*scale)/2,layout=TITLE_LAYOUTS[activeTitleMode];
+ let top=Math.max(14,offsetY+sh*layout.top*scale);const bottom=Math.min(vh-14,offsetY+sh*layout.bottom*scale-14);
+ if(bottom-top<220)top=14;
+ let space=Math.max(100,bottom-top),fit=1,height=hero.getBoundingClientRect().height;
+ if(height>space&&top>14){top=Math.max(14,bottom-height);space=Math.max(100,bottom-top)}
+ // Keep the button at its full touch size; reduce only the text and gaps.
+ for(let pass=0;pass<4&&height>space;pass++){
+  fit=Math.max(.35,fit*Math.max(.35,(space-64)/Math.max(1,height-64)));
+  hero.style.setProperty('--hero-fit',String(fit));height=hero.getBoundingClientRect().height;
+ }
+ hero.style.top=Math.round(Math.max(14+height/2,Math.min(vh*.40,bottom-height/2)))+'px';
+}
+let titleResizeTimer;window.addEventListener('resize',()=>{requestAnimationFrame(placeTitleContent);clearTimeout(titleResizeTimer);titleResizeTimer=setTimeout(()=>{if(cur!=='game'&&cur!=='s-result')loadTitleArtwork().catch(()=>{})},120)});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>requestAnimationFrame(placeTitleContent));
+
 paintTitle();
 function enrichRankEntry(entry,date){
  const saved=store.get(RANK_STORAGE,{})[date]||[];
@@ -559,23 +596,16 @@ $('#btn-fs').onclick=()=>{const d=document.documentElement;if(document.fullscree
 
 // entry
 document.querySelectorAll('canvas[data-spr]').forEach(c=>sprCanvas(c,c.dataset.spr));
-$('#entry-form').onsubmit=async e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
+$('#entry-form').onsubmit=e=>{e.preventDefault();const v=$('#name-in').value.replace(/\s+/g,' ').trim();
   if(!v){$('#name-err').textContent='이름을 입력해 주세요.';$('#name-in').focus();return}
   const digits=$('#phone-last4').value;if(!/^[0-9]{4}$/.test(digits)){$('#name-err').textContent='전화번호 뒤 네 자리를 숫자로 입력해 주세요.';$('#phone-last4').focus();return}
-  const name=v.slice(0,12),btn=e.submitter||$('#entry-form button[type=submit]');
-  if(CONFIG.SHEET_URL){btn.disabled=true;$('#name-err').textContent='참여 기록 확인 중…';
-    const res=await checkPlayed(name,digits);btn.disabled=false;
-    if(res==='played'){$('#name-err').textContent='오늘은 이미 참여하셨어요. 게임은 하루 1회만 참여할 수 있어요.';return}
-    if(res!=='ok'){$('#name-err').textContent='참여 기록을 확인하지 못했어요. 인터넷 연결을 확인하고 다시 눌러주세요.';return}}
-  phoneLast4=digits;player=name;participationId=uid();$('#name-err').textContent='';$('#name-in').blur();$('#phone-last4').blur();sBeep(1);openPick()};
-// 당일 1회 참여 확인 (서버 시트 기준)
-async function checkPlayed(name,phone){try{const r=await withTimeout(fetch(CONFIG.SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'check',name,phoneLast4:phone})}),15000);const d=await r.json();if(!r.ok||d.ok!==true)return 'error';return d.played?'played':'ok'}catch(e){return 'error'}}
+  phoneLast4=digits;player=v.slice(0,12);participationId=uid();$('#name-err').textContent='';$('#name-in').blur();$('#phone-last4').blur();sBeep(1);openPick()};
 $('#phone-last4').oninput=()=>{$('#phone-last4').value=$('#phone-last4').value.replace(/[^0-9]/g,'').slice(0,4);$('#name-err').textContent=''};
 $('#name-in').oninput=()=>{$('#name-err').textContent=''};
 $('#btn-entry-back').onclick=goTitle;
 
 // pick
-function openPick(){$('#pick-title').textContent=`${player}님, 장면을 골라요`;
+function openPick(){$('#pick-title').textContent=`${player}님, 어떤 장소에서 사회연대경제 제품을 만나볼까요?`;
   $('#cards').innerHTML=Object.entries(SCENES).map(([k,s])=>`<button class="card" data-scene="${k}"><canvas width="640" height="400" data-thumb="${k}"></canvas><div class="cb"><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p><span class="go">시작 ▶</span></div></button>`).join('');
   document.querySelectorAll('[data-thumb]').forEach(c=>c.getContext('2d').drawImage(sceneCanvas(c.dataset.thumb,false),0,0,c.width,c.height));
   show('s-pick')}
@@ -590,7 +620,7 @@ function startGame(key){
   const s=SCENES[key];Object.assign(G,{key,items:s.items.map((_,i)=>productBounds(s,i)),found:new Set(),opened:new Set(),hint:null,hintUsed:0,wrong:0,sec:0,done:false,running:false,misses:[],reveal:false});
   base=sceneCanvas(key,true);G.vb={x:0,y:0,w:W,h:H};$('#btn-hint').disabled=false;document.querySelectorAll('.pop').forEach(e=>e.remove());
   $('#g-name').textContent=player+' 님';$('#g-scene').textContent=s.title;
-  $('#tray').innerHTML=G.items.map((it,i)=>`<li data-k="${i}"><canvas data-tray="${it.k}"></canvas><span class="product-label">${['honey','jam','tumbler','detergent','toothbrush'].includes(it.k)?'<span class="food-badge">#먹거리으뜸경연대회</span>':''}<span>${it.k==='detergent'?'삼각 초콜릿 2종<br>선물세트':it.k==='toothbrush'?'아차산 할매니얼<br>카라멜':esc(NAMES[it.k])}</span></span>${it.k===HIDE[key].crate?'<small>상자 속</small>':''}</li>`).join('');
+  $('#tray').innerHTML=G.items.map((it,i)=>`<li data-k="${i}"><canvas data-tray="${it.k}"></canvas><span class="product-label">${PRODUCT_DESCRIPTIONS[it.k]?`<span class="product-description">${esc(PRODUCT_DESCRIPTIONS[it.k])}</span>`:''}${['honey','jam','tumbler','detergent','toothbrush'].includes(it.k)?'<span class="food-badge">#먹거리으뜸경연대회</span>':''}<span>${it.k==='detergent'?'삼각 초콜릿 2종<br>선물세트':it.k==='toothbrush'?'아차산 할매니얼<br>카라멜':esc(NAMES[it.k])}</span></span>${it.k===HIDE[key].crate?'<small>상자 속</small>':''}</li>`).join('');
   document.querySelectorAll('[data-tray]').forEach(c=>sprCanvas(c,c.dataset.tray));
   $('#g-time').textContent=fmt(CONFIG.TIME_LIMIT);$('#g-timebox').classList.remove('warn');updateStats();show('game');resize();
   // READY 3-2-1
@@ -669,8 +699,7 @@ function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval
       <div class="res"><div class="stat"><b>${cleared?fmt(G.sec):G.found.size+'/'+G.items.length}</b><small>${cleared?'걸린 시간':'찾은 개수'}</small></div><div class="stat"><b>${G.wrong}</b><small>틀린 횟수</small></div><div class="stat"><b>${total}</b><small>점수${bonus?` (+${bonus})`:''}</small></div></div>
       <button class="pbtn coral small" data-m="download">참여 결과 이미지 저장</button><div class="result-qr-grid">${[
  ['work-together','함께일하는재단','인스타그램','https://www.instagram.com/work_together_foundation/'],
- ['shinhan','신한금융희망재단','인스타그램','https://www.instagram.com/shinhanfoundation/'],
- ['newsletter','함께일하는재단','뉴스레터 구독','https://hamkke.org/#stb_subscribe']
+ ['shinhan','신한금융희망재단','인스타그램','https://www.instagram.com/shinhanfoundation/']
 ].map(([id,org,label,url])=>`<a class="qr-card" href="${url}" target="_blank" rel="noopener noreferrer"><span>${org}</span><b>${label}</b><img src="assets/qr-${id}.svg" width="176" height="176" alt="${org} ${label} QR 코드"></a>`).join('')}</div><div id="result-image"></div><p class="save wait" id="save-msg">기록 저장 중…</p>
       <div class="prize-note"><p>숨은그림찾기 참여 후 SNS 팔로우 혹은 재단 뉴스레터 구독 시,</p><p class="prize-claim">경품 뽑기 참여 가능!</p></div>
       <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small" data-m="again">다시 하기</button><button class="pbtn small coral" data-m="home">처음으로</button></div>`,
