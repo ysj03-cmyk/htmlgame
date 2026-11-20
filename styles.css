@@ -407,3 +407,9 @@ html{height:100%;height:-webkit-fill-available}
  #game .play{grid-template-columns:230px minmax(0,1fr)}
  #game .product-description{font-size:9px}
 }
+
+
+/* Current cover artwork stays unchanged; draw at device resolution. */
+#bg{image-rendering:auto}
+#s-title .title-purpose{font-family:ResultSans,'Noto Sans KR',sans-serif;color:#000;font-weight:700;text-shadow:none;font-size:calc(clamp(12px,2.15vh,19px)*var(--hero-fit,1));line-height:1.6;letter-spacing:0}
+@media(max-width:600px){#s-title .title-purpose{font-size:12px;line-height:1.65;white-space:normal}}

@@ -550,7 +550,15 @@ $('#t-game').innerHTML='우리 일상 속 숨은 <span class="hl">사회연대�
 document.title=CONFIG.GAME_NAME;
 // Cover artwork has its own clear title area; no pixel scenery or floating sprites.
 const coverCanvas=$('#bg');coverCanvas.width=1600;coverCanvas.height=1000;
-function paintTitle(){const c=$('#bg');if(ART_IMAGES.title){c.width=ART_IMAGES.title.naturalWidth||ART_IMAGES.title.width;c.height=ART_IMAGES.title.naturalHeight||ART_IMAGES.title.height}const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(ART_IMAGES.title){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(ART_IMAGES.title,0,0,c.width,c.height)}}
+function paintTitle(){
+ const c=$('#bg'),image=ART_IMAGES.title;if(!image)return;
+ const vw=Math.max(1,window.innerWidth),vh=Math.max(1,window.innerHeight),dpr=Math.min(3,window.devicePixelRatio||1);
+ c.width=Math.round(vw*dpr);c.height=Math.round(vh*dpr);
+ const ctx=c.getContext('2d'),sw=image.naturalWidth||image.width,sh=image.naturalHeight||image.height;
+ const scale=Math.max(c.width/sw,c.height/sh),w=sw*scale,h=sh*scale;
+ ctx.clearRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+ ctx.drawImage(image,(c.width-w)/2,(c.height-h)/2,w,h);
+}
 function placeTitleContent(){
  const hero=$('#s-title .title-main');if(!hero||$('#s-title').hidden)return;
  hero.style.maxHeight='none';hero.style.setProperty('--hero-fit','1');
