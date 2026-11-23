@@ -531,3 +531,11 @@ button,input,select,textarea,#rank-box .rank-head,#rank-box #rank-list>li{font-f
 
 @media(min-width:601px) and (max-width:1000px){#s-title #t-game{font-size:clamp(28px,4.75vw,50px)}}
 @media(max-width:600px){#s-title #t-game{font-size:clamp(26px,6.8vw,38px)}}
+
+.result-content .qr-instagram-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:8px;padding:8px 12px;border:1px solid #b8cebf;border-radius:8px;background:#eef5ee;color:#245b45;font-family:var(--font);font-size:15px;font-weight:700;line-height:1.4;text-decoration:underline;text-underline-offset:3px;word-break:keep-all}
+.result-content .qr-instagram-link:hover{background:#e0ede1;color:#163d2d}
+.result-content .qr-instagram-link:focus-visible{outline:3px solid #1675d1;outline-offset:3px}
+@media(max-width:600px){.result-content .qr-instagram-link{font-size:14px;margin-top:6px}}
+
+.result-content .prize-note{display:block;max-width:100%;margin:0;font-size:clamp(8.5px,3.3vw,17px)!important;line-height:1.65;text-align:center;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+.result-content .prize-note .prize-claim{display:inline;margin:0;font-size:1.12em;font-weight:700;color:var(--coral-d)}

@@ -738,8 +738,8 @@ function end(cleared){if(G.done)return;G.done=true;G.running=false;clearInterval
       <button class="pbtn coral small" data-m="download">참여 결과 이미지 저장</button><div class="result-qr-grid">${[
  ['work-together','함께일하는재단','인스타그램','https://www.instagram.com/work_together_foundation/'],
  ['shinhan','신한금융희망재단','인스타그램','https://www.instagram.com/shinhanfoundation/']
-].map(([id,org,label,url])=>`<a class="qr-card" href="${url}" target="_blank" rel="noopener noreferrer"><span>${org}</span><b>${label}</b><img src="assets/qr-${id}.svg" width="176" height="176" alt="${org} ${label} QR 코드"></a>`).join('')}</div><div id="result-image"></div><p class="save wait" id="save-msg">기록 저장 중…</p>
-      <div class="prize-note"><p>숨은그림찾기 참여 후 SNS 팔로우 혹은 재단 뉴스레터 구독 시,</p><p class="prize-claim">경품 뽑기 참여 가능!</p></div>
+].map(([id,org,label,url])=>`<div class="qr-card"><span>${org}</span><b>${label}</b><img src="assets/qr-${id}.svg" width="176" height="176" alt="${org} ${label} QR 코드"><a class="qr-instagram-link" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${org} 인스타그램 바로가기, 새 창에서 열림">인스타그램 바로가기</a></div>`).join('')}</div><div id="result-image"></div><p class="save wait" id="save-msg">기록 저장 중…</p>
+      <p class="prize-note">숨은그림찾기 참여 후 SNS 팔로우 시, <strong class="prize-claim">경품 뽑기 참여 가능!</strong></p>
       <div class="row">${cleared?'':'<button class="pbtn small" data-m="look">정답 보기</button>'}<button class="pbtn small" data-m="again">다시 하기</button><button class="pbtn small coral" data-m="home">처음으로</button></div>`,
       act=>{if(act==='download'){saveResultImage(rec);return}if(act==='look')show('game');else if(act==='again'){closeModal();openPick()}else if(act==='home')goTitle()});
     queueRecord(rec).then(async ok=>{const m=$('#save-msg');if(!m)return;
