@@ -488,14 +488,15 @@ const sceneCache={};
 const BASKET_RECT=[107,13,1040,1179];
 const ART_IMAGES={};let artPromise=null;
 function readArtworkImage(path){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('그림을 불러오지 못했어요.'));im.src=path})}
-const TITLE_LAYOUTS={wide:{top:.23,bottom:.59},medium:{top:.33,bottom:.59},portrait:{top:.29,bottom:.65}};
-const titlePromises={};let activeTitleMode='medium';
+const TITLE_LAYOUTS={wide:{top:.245,bottom:.625},medium:{top:.35,bottom:.61},portrait:{top:.31,bottom:.65}};
+const titlePromises={},titleRoofPromises={};let activeTitleMode='medium';
 function titleCoverMode(){const ratio=window.innerWidth/window.innerHeight;return ratio>=1.5?'wide':ratio<=.8?'portrait':'medium'}
 async function loadTitleArtwork(){
  const mode=titleCoverMode();
  if(!titlePromises[mode])titlePromises[mode]=readArtworkImage('assets/title-'+mode+'.webp?v=41').catch(error=>{delete titlePromises[mode];throw error});
- const image=await titlePromises[mode];
- if(mode===titleCoverMode()){activeTitleMode=mode;ART_IMAGES.title=image;paintTitle();requestAnimationFrame(placeTitleContent)}
+ if(!titleRoofPromises[mode])titleRoofPromises[mode]=readArtworkImage('assets/title-roofs-'+mode+'.webp?v=57').catch(()=>{delete titleRoofPromises[mode];return null});
+ const [image,roofs]=await Promise.all([titlePromises[mode],titleRoofPromises[mode]]);
+ if(mode===titleCoverMode()){activeTitleMode=mode;ART_IMAGES.title=image;ART_IMAGES.titleRoofs=roofs;paintTitle();requestAnimationFrame(placeTitleContent)}
  return image;
 }
 async function loadArtwork(){if(artPromise)return artPromise;artPromise=(async()=>{
@@ -574,6 +575,11 @@ function drawCoverLabels(ctx,mode,scale,dx,dy){
  labels.forEach(([x,y,z,angle],i)=>{const p=specs[i];ctx.save();ctx.translate(dx+x*scale,dy+y*scale);ctx.rotate(angle*Math.PI/180);ctx.scale(scale*z,scale*z);ctx.fillStyle=p.bg;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.textAlign='center';ctx.textBaseline='middle';p.lines.forEach(([text,ty,size,color])=>{ctx.font='700 '+(size*1.08)+'px ResultSans';ctx.fillStyle=color;ctx.fillText(text,0,ty,p.w-1)});ctx.restore()});
 }
 
+const TITLE_ROOFS={wide:[[209,215,256,110],[1316,250,348,125]],medium:[[0,435,222,82],[1025,470,229,120]],portrait:[[0,458,185,82],[812,539,212,120]]};
+function drawCoverRoofs(ctx,mode,scale,dx,dy){
+ const atlas=ART_IMAGES.titleRoofs;if(!atlas)return;let sourceY=0;
+ TITLE_ROOFS[mode].forEach(([x,y,w,h])=>{ctx.drawImage(atlas,0,sourceY,w,h,dx+x*scale,dy+y*scale,w*scale,h*scale);sourceY+=h});
+}
 function paintTitle(){
  const c=$('#bg'),image=ART_IMAGES.title;if(!image)return;
  const vw=Math.max(1,window.innerWidth),vh=Math.max(1,window.innerHeight),dpr=Math.min(3,window.devicePixelRatio||1);
@@ -582,6 +588,7 @@ function paintTitle(){
  const scale=Math.max(c.width/sw,c.height/sh),w=sw*scale,h=sh*scale;
  ctx.clearRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
  ctx.drawImage(image,(c.width-w)/2,(c.height-h)/2,w,h);
+ drawCoverRoofs(ctx,activeTitleMode,scale,(c.width-w)/2,(c.height-h)/2);
  drawCoverLabels(ctx,activeTitleMode,scale,(c.width-w)/2,(c.height-h)/2);
 }
 function placeTitleContent(){
@@ -591,15 +598,15 @@ function placeTitleContent(){
  const image=ART_IMAGES.title,sw=image?(image.naturalWidth||image.width):1254,sh=image?(image.naturalHeight||image.height):1254;
  const vw=window.innerWidth,vh=window.innerHeight,scale=Math.max(vw/sw,vh/sh),offsetY=(vh-sh*scale)/2,layout=TITLE_LAYOUTS[activeTitleMode];
  let top=Math.max(14,offsetY+sh*layout.top*scale);const bottom=Math.min(vh-14,offsetY+sh*layout.bottom*scale-14);
- if(bottom-top<220)top=14;
  let space=Math.max(100,bottom-top),fit=1,height=hero.getBoundingClientRect().height;
- if(height>space&&top>14){top=Math.max(14,bottom-height);space=Math.max(100,bottom-top)}
+ const heading=$('#t-game'),availableWidth=Math.max(1,Math.min(hero.getBoundingClientRect().width-16,sw*scale*(activeTitleMode==='wide'?.47:.58)));
+ if(heading&&heading.scrollWidth>availableWidth){fit=Math.max(.35,availableWidth/heading.scrollWidth);hero.style.setProperty('--hero-fit',String(fit));height=hero.getBoundingClientRect().height;}
  // Keep the button at its full touch size; reduce only the text and gaps.
  for(let pass=0;pass<4&&height>space;pass++){
-  fit=Math.max(.35,fit*Math.max(.35,(space-64)/Math.max(1,height-64)));
+  fit=Math.max(.35,fit*Math.max(.35,(space-76)/Math.max(1,height-76)));
   hero.style.setProperty('--hero-fit',String(fit));height=hero.getBoundingClientRect().height;
  }
- hero.style.top=Math.round(Math.max(14+height/2,Math.min(vh*.40,bottom-height/2)))+'px';
+ hero.style.top=Math.round(Math.max(top+height/2,Math.min((top+bottom)/2,bottom-height/2)))+'px';
 }
 document.fonts?.load('700 12px ResultSans').then(()=>{if(ART_IMAGES.title)paintTitle()}).catch(()=>{});
 let titleResizeTimer;window.addEventListener('resize',()=>{requestAnimationFrame(placeTitleContent);clearTimeout(titleResizeTimer);titleResizeTimer=setTimeout(()=>{if(cur!=='game'&&cur!=='s-result')loadTitleArtwork().catch(()=>{})},120)});
@@ -639,8 +646,12 @@ $('#name-in').oninput=()=>{$('#name-err').textContent=''};
 $('#btn-entry-back').onclick=goTitle;
 
 // pick
+function sceneDescription(text){
+ const match=text.match(/^(.*)\s(살펴봐요|찾아봐요|둘러봐요)\.$/);
+ return match?esc(match[1])+' <span class="scene-action">'+esc(match[2])+'.</span>':esc(text);
+}
 function openPick(){$('#pick-title').textContent=`${player}님, 어떤 장소에서 사회연대경제 제품을 만나볼까요?`;
-  $('#cards').innerHTML=Object.entries(SCENES).map(([k,s])=>`<button class="card" data-scene="${k}"><canvas width="640" height="400" data-thumb="${k}"></canvas><div class="cb"><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p><span class="go">시작 ▶</span></div></button>`).join('');
+  $('#cards').innerHTML=Object.entries(SCENES).map(([k,s])=>`<button class="card" data-scene="${k}"><canvas width="640" height="400" data-thumb="${k}"></canvas><div class="cb"><h3>${esc(s.title)}</h3><p>${sceneDescription(s.desc)}</p><span class="go">시작 ▶</span></div></button>`).join('');
   document.querySelectorAll('[data-thumb]').forEach(c=>c.getContext('2d').drawImage(sceneCanvas(c.dataset.thumb,false),0,0,c.width,c.height));
   show('s-pick')}
 $('#cards').onclick=e=>{const b=e.target.closest('[data-scene]');if(b)startGame(b.dataset.scene)};
@@ -763,8 +774,8 @@ document.addEventListener('gesturestart',e=>e.preventDefault());
 goTitle();flush();
 
 async function saveResultImage(rec){
- try{await document.fonts.ready;const c=mkCanvas(1080,1350),x=c.getContext('2d');x.fillStyle='#fff8e7';x.fillRect(0,0,1080,1350);x.fillStyle='#2b2340';x.fillRect(0,0,1080,210);x.textAlign='center';x.fillStyle='#ffc63a';x.font='800 38px GameTitleSans,sans-serif';x.fillText('우리 일상 속 숨은',540,63);x.fillText('사회연대경제 제품 찾기',540,112);x.fillStyle='#fff';x.font='28px sans-serif';x.fillText('지역에서 시작된 변화, 당신의 일상으로',540,151);
- const key=Object.keys(SCENES).find(k=>SCENES[k].title===rec.scene);x.drawImage(sceneCanvas(key,true),50,250,980,552);x.fillStyle='#2b2340';x.font='bold 44px sans-serif';x.fillText(rec.name+'님의 참여 기록',540,886,980);x.font='32px sans-serif';x.fillText(rec.scene+' · '+rec.result,540,951);x.font='bold 57px sans-serif';x.fillStyle='#dc5d43';x.fillText(rec.found+' / '+rec.total+'개 발견',540,1042);x.fillStyle='#2b2340';x.font='30px sans-serif';x.fillText(rec.score+'점  ·  '+rec.sec+'초  ·  오답 '+rec.wrong+'회',540,1112);x.font='24px sans-serif';x.fillText('신한금융희망재단 × 함께일하는재단',540,1210);x.fillText(rec.date+'  #숨은사회연대경제찾기',540,1260);
+ try{await document.fonts.ready;const c=mkCanvas(1080,1350),x=c.getContext('2d');x.fillStyle='#fff8e7';x.fillRect(0,0,1080,1350);x.fillStyle='#2b2340';x.fillRect(0,0,1080,210);x.textAlign='center';x.fillStyle='#ffc63a';x.font='700 38px ResultSans';x.fillText('우리 일상 속 숨은',540,63);x.fillText('사회연대경제 제품 찾기',540,112);x.fillStyle='#fff';x.font='28px ResultSans';x.fillText('지역에서 시작된 변화, 당신의 일상으로',540,151);
+ const key=Object.keys(SCENES).find(k=>SCENES[k].title===rec.scene);x.drawImage(sceneCanvas(key,true),50,250,980,552);x.fillStyle='#2b2340';x.font='bold 44px ResultSans';x.fillText(rec.name+'님의 참여 기록',540,886,980);x.font='32px ResultSans';x.fillText(rec.scene+' · '+rec.result,540,951);x.font='bold 57px ResultSans';x.fillStyle='#dc5d43';x.fillText(rec.found+' / '+rec.total+'개 발견',540,1042);x.fillStyle='#2b2340';x.font='30px ResultSans';x.fillText(rec.score+'점  ·  '+rec.sec+'초  ·  오답 '+rec.wrong+'회',540,1112);x.font='24px ResultSans';x.fillText('신한금융희망재단 × 함께일하는재단',540,1210);x.fillText(rec.date+'  #숨은사회연대경제찾기',540,1260);
  const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(!blob)throw Error('PNG 생성 실패');const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='숨은그림찾기_참여결과_'+rec.date+'.png';document.body.append(a);a.click();a.remove();const holder=$('#result-image');if(holder){holder.innerHTML='';const im=document.createElement('img');im.src=url;im.alt='참여 결과 이미지 — 길게 눌러 사진에 저장할 수 있어요';im.className='result-preview';holder.append(im);const note=document.createElement('p');note.textContent='저장이 안 되면 이미지를 길게 눌러 사진에 저장해 주세요.';note.style.fontSize='13px';holder.append(note)}setTimeout(()=>URL.revokeObjectURL(url),300000);
  }catch(e){const m=$('#save-msg');if(m)m.textContent='이미지 저장에 실패했어요. 다시 눌러주세요.'}}
 loadArtwork().then(()=>document.querySelectorAll('canvas[data-tray]').forEach(c=>sprCanvas(c,c.dataset.tray))).catch(()=>{});
