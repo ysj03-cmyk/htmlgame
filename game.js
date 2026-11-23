@@ -489,14 +489,13 @@ const BASKET_RECT=[107,13,1040,1179];
 const ART_IMAGES={};let artPromise=null;
 function readArtworkImage(path){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('그림을 불러오지 못했어요.'));im.src=path})}
 const TITLE_LAYOUTS={wide:{top:.245,bottom:.625},medium:{top:.35,bottom:.61},portrait:{top:.31,bottom:.65}};
-const titlePromises={},titleRoofPromises={};let activeTitleMode='medium';
+const titlePromises={};let activeTitleMode='medium';
 function titleCoverMode(){const ratio=window.innerWidth/window.innerHeight;return ratio>=1.5?'wide':ratio<=.8?'portrait':'medium'}
 async function loadTitleArtwork(){
  const mode=titleCoverMode();
- if(!titlePromises[mode])titlePromises[mode]=readArtworkImage('assets/title-'+mode+'.webp?v=41').catch(error=>{delete titlePromises[mode];throw error});
- if(!titleRoofPromises[mode])titleRoofPromises[mode]=readArtworkImage('assets/title-roofs-'+mode+'.webp?v=59').catch(()=>{delete titleRoofPromises[mode];return null});
- const [image,roofs]=await Promise.all([titlePromises[mode],titleRoofPromises[mode]]);
- if(mode===titleCoverMode()){activeTitleMode=mode;ART_IMAGES.title=image;ART_IMAGES.titleRoofs=roofs;paintTitle();requestAnimationFrame(placeTitleContent)}
+ if(!titlePromises[mode])titlePromises[mode]=readArtworkImage('assets/title-final-'+mode+'-v60.webp').catch(error=>{delete titlePromises[mode];throw error});
+ const image=await titlePromises[mode];
+ if(mode===titleCoverMode()){activeTitleMode=mode;ART_IMAGES.title=image;paintTitle();requestAnimationFrame(placeTitleContent)}
  return image;
 }
 async function loadArtwork(){if(artPromise)return artPromise;artPromise=(async()=>{
@@ -575,11 +574,6 @@ function drawCoverLabels(ctx,mode,scale,dx,dy){
  labels.forEach(([x,y,z,angle],i)=>{const p=specs[i];ctx.save();ctx.translate(dx+x*scale,dy+y*scale);ctx.rotate(angle*Math.PI/180);ctx.scale(scale*z,scale*z);ctx.fillStyle=p.bg;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.textAlign='center';ctx.textBaseline='middle';p.lines.forEach(([text,ty,size,color])=>{ctx.font='700 '+(size*1.08)+'px ResultSans';ctx.fillStyle=color;ctx.fillText(text,0,ty,p.w-1)});ctx.restore()});
 }
 
-const TITLE_ROOFS={wide:[[209,215,256,110],[1316,250,348,125]],medium:[[0,435,222,82],[1025,470,229,120]],portrait:[[0,458,185,82],[812,539,212,120]]};
-function drawCoverRoofs(ctx,mode,scale,dx,dy){
- const atlas=ART_IMAGES.titleRoofs;if(!atlas)return;let sourceY=0;
- TITLE_ROOFS[mode].forEach(([x,y,w,h])=>{ctx.drawImage(atlas,0,sourceY,w,h,dx+x*scale,dy+y*scale,w*scale,h*scale);sourceY+=h});
-}
 function paintTitle(){
  const c=$('#bg'),image=ART_IMAGES.title;if(!image)return;
  const vw=Math.max(1,window.innerWidth),vh=Math.max(1,window.innerHeight),dpr=Math.min(3,window.devicePixelRatio||1);
@@ -588,7 +582,6 @@ function paintTitle(){
  const scale=Math.max(c.width/sw,c.height/sh),w=sw*scale,h=sh*scale;
  ctx.clearRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
  ctx.drawImage(image,(c.width-w)/2,(c.height-h)/2,w,h);
- drawCoverRoofs(ctx,activeTitleMode,scale,(c.width-w)/2,(c.height-h)/2);
  drawCoverLabels(ctx,activeTitleMode,scale,(c.width-w)/2,(c.height-h)/2);
 }
 function placeTitleContent(){

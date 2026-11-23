@@ -147,7 +147,7 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 .modal a.pbtn{flex-wrap:wrap;padding:8px 10px;line-height:1.5;font-size:clamp(12px,2.8vw,16px)} @media(min-width:1000px){#s-title .title-main{transform:translateX(clamp(12px,2vw,32px))}}
 .tray li canvas{image-rendering:auto} 
 /* One full-screen cover, with the hero centered independently from the leaderboard. */
-#bg{background:#a8bb83 url('assets/title-medium.webp?v=41') center/cover no-repeat;image-rendering:auto}
+#bg{background:#a8bb83 url('assets/title-final-medium-v60.webp') center/cover no-repeat;image-rendering:auto}
 #s-title{display:block}
 #s-title::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 43% 34% at 50% 50%,rgba(25,60,37,.22),transparent 100%);pointer-events:none}
 #s-title .title-wrap{display:block;position:static;width:100%;height:100%;margin:0;padding:0}
@@ -380,9 +380,9 @@ html{height:100%;height:-webkit-fill-available}
 
 
 /* Native illustrated compositions fill each screen; no letterboxing or blur. */
-#bg{object-fit:cover;object-position:center;background:#a8bb83 url('assets/title-medium.webp?v=41') center/cover no-repeat}
-@media(min-aspect-ratio:3/2){#bg{background-image:url('assets/title-wide.webp?v=41')}}
-@media(max-aspect-ratio:4/5){#bg{background-image:url('assets/title-portrait.webp?v=41')}}
+#bg{object-fit:cover;object-position:center;background:#a8bb83 url('assets/title-final-medium-v60.webp') center/cover no-repeat}
+@media(min-aspect-ratio:3/2){#bg{background-image:url('assets/title-final-wide-v60.webp')}}
+@media(max-aspect-ratio:4/5){#bg{background-image:url('assets/title-final-portrait-v60.webp')}}
 
 
 /* The start button is never clipped inside a height-limited hero. */
